@@ -18,13 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // 2. Update Job Status
-    const job = await prisma.job.update({
-      where: { id: jobId },
-      data: { status: "ANALYZING" },
-    });
-
-    // 3. Fetch Data from Apify
+    // 2. Fetch Data from Apify
     const apifyClient = new ApifyClient({
       token: process.env.APIFY_API_TOKEN,
     });
@@ -37,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const dataset = await apifyClient.dataset(run.defaultDatasetId).listItems();
     
-    // Extract textual content for Gemini
+    // Extract textual content
     const extractedData = dataset.items.map((item: any) => ({
       postText: item.text,
       comments: item.comments?.map((c: any) => c.text) || [],
@@ -45,7 +39,29 @@ export async function POST(req: NextRequest) {
 
     const rawDataString = JSON.stringify(extractedData, null, 2);
 
-    // 4. Send to Gemini
+    // Fetch Job to check type
+    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
+
+    // Update with raw data
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { rawScrapeData: rawDataString },
+    });
+
+    if (job.type === "SCRAPE") {
+      // Just Scraping, no AI needed
+      await prisma.job.update({
+        where: { id: jobId },
+        data: { status: "COMPLETED" },
+      });
+      return NextResponse.json({ status: "success" });
+    }
+
+    // Otherwise, SCRAPE_AND_ANALYZE
+    await prisma.job.update({ where: { id: jobId }, data: { status: "ANALYZING" } });
+
+    // Send to Gemini
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
 
@@ -63,7 +79,7 @@ export async function POST(req: NextRequest) {
     const response = await result.response;
     const reportMarkdown = response.text();
 
-    // 5. Save Report to DB
+    // Save Report to DB
     await prisma.job.update({
       where: { id: jobId },
       data: {
@@ -75,7 +91,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "success" });
   } catch (error: any) {
     console.error("Webhook Error:", error);
-    // Attempt to mark as failed
     try {
       const body = await req.json();
       if (body.jobId) {

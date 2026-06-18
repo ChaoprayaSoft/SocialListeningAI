@@ -20,13 +20,25 @@ model Prompt {
   updatedAt DateTime @updatedAt
 }
 
+model SavedUrl {
+  id        String   @id @default(uuid())
+  title     String
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Job {
   id            String   @id @default(uuid())
-  url           String
-  promptContent String
+  title         String?  // Auto-generated like "Scrape 2026-06-18 10:00"
+  type          String   @default("SCRAPE_AND_ANALYZE") // SCRAPE, ANALYZE, SCRAPE_AND_ANALYZE
+  url           String?  // Optional for ANALYZE type
+  promptContent String?  // Optional for SCRAPE type
   apifyRunId    String?
+  sourceJobIds  String[] // IDs of SCRAPE jobs used for this ANALYZE job
   status        String   @default("PENDING") // PENDING, SCRAPING, ANALYZING, COMPLETED, FAILED
-  resultReport  String?  @db.Text
+  rawScrapeData String?  @db.Text // Store raw JSON from Apify
+  resultReport  String?  @db.Text // Store Markdown from Gemini
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

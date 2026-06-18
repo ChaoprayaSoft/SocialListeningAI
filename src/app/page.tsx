@@ -2,33 +2,57 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Activity, AlertTriangle, CheckCircle, Clock, Search, Save, List } from "lucide-react";
+import { Activity, AlertTriangle, Clock, Search, Save, Database, BarChart2 } from "lucide-react";
 
 type Prompt = { id: string; title: string; content: string };
-type Job = { id: string; status: string; resultReport?: string };
+type SavedUrl = { id: string; title: string; url: string };
+type Job = { 
+  id: string; 
+  title: string;
+  type: string;
+  status: string; 
+  resultReport?: string;
+  rawScrapeData?: string;
+  createdAt: string;
+};
 
 export default function Home() {
   const [url, setUrl] = useState("");
+  const [savedUrlTitle, setSavedUrlTitle] = useState("");
+  const [urls, setUrls] = useState<SavedUrl[]>([]);
+
   const [promptContent, setPromptContent] = useState("");
-  const [promptTitle, setPromptTitle] = useState(""); // For saving new prompt
+  const [promptTitle, setPromptTitle] = useState(""); 
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   
+  const [completedScrapes, setCompletedScrapes] = useState<Job[]>([]);
+  const [selectedSourceJobs, setSelectedSourceJobs] = useState<string[]>([]);
+
+  const [activeTab, setActiveTab] = useState<"SCRAPE" | "ANALYZE" | "BOTH">("BOTH");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch prompts on load
   useEffect(() => {
-    fetch("/api/prompts")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setPrompts(data);
-      })
-      .catch(console.error);
+    fetch("/api/prompts").then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setPrompts(data);
+    }).catch(console.error);
+
+    fetch("/api/urls").then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setUrls(data);
+    }).catch(console.error);
+
+    fetchCompletedScrapes();
   }, []);
 
-  // Poll job status
+  const fetchCompletedScrapes = () => {
+    fetch("/api/jobs").then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setCompletedScrapes(data);
+    }).catch(console.error);
+  }
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (jobId && job?.status !== "COMPLETED" && job?.status !== "FAILED") {
@@ -40,6 +64,7 @@ export default function Home() {
             setJob(data);
             if (data.status === "COMPLETED" || data.status === "FAILED") {
               setIsSubmitting(false);
+              fetchCompletedScrapes(); // Refresh scrapes list if a scrape finished
             }
           }
         } catch (e) {
@@ -50,10 +75,11 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [jobId, job?.status]);
 
-  const handleStartAnalysis = async () => {
+  const handleSubmit = async (type: "SCRAPE" | "ANALYZE" | "SCRAPE_AND_ANALYZE") => {
     setError(null);
-    if (!url) return setError("Please enter a valid URL");
-    if (!promptContent) return setError("Please enter a prompt");
+    if ((type === "SCRAPE" || type === "SCRAPE_AND_ANALYZE") && !url) return setError("Please enter a valid URL");
+    if ((type === "ANALYZE" || type === "SCRAPE_AND_ANALYZE") && !promptContent) return setError("Please enter a prompt");
+    if (type === "ANALYZE" && selectedSourceJobs.length === 0) return setError("Please select at least one scrape job to analyze");
     
     setIsSubmitting(true);
     setJob(null);
@@ -63,12 +89,17 @@ export default function Home() {
       const res = await fetch("/api/scrape/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, promptContent }),
+        body: JSON.stringify({ 
+          type, 
+          url, 
+          promptContent,
+          sourceJobIds: type === "ANALYZE" ? selectedSourceJobs : undefined 
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.url?._errors?.[0] || "Failed to start analysis");
+      if (!res.ok) throw new Error(data.error || "Failed to start");
       setJobId(data.jobId);
-      setJob({ id: data.jobId, status: "SCRAPING" });
+      setJob({ id: data.jobId, title: "Processing...", type, status: type === "ANALYZE" ? "ANALYZING" : "SCRAPING", createdAt: "" });
     } catch (e: any) {
       setError(e.message);
       setIsSubmitting(false);
@@ -87,12 +118,32 @@ export default function Home() {
         const newPrompt = await res.json();
         setPrompts([newPrompt, ...prompts]);
         setPromptTitle("");
-        alert("Prompt saved successfully!");
+        alert("Prompt saved!");
       }
-    } catch (e) {
-      console.error(e);
-      alert("Failed to save prompt");
-    }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSaveUrl = async () => {
+    if (!savedUrlTitle || !url) return alert("Title and URL required");
+    try {
+      const res = await fetch("/api/urls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: savedUrlTitle, url: url }),
+      });
+      if (res.ok) {
+        const newUrl = await res.json();
+        setUrls([newUrl, ...urls]);
+        setSavedUrlTitle("");
+        alert("URL saved!");
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleSourceJob = (id: string) => {
+    setSelectedSourceJobs(prev => 
+      prev.includes(id) ? prev.filter(j => j !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -104,7 +155,6 @@ export default function Home() {
             <Activity className="text-blue-600" />
             AI Satisfaction Management
           </h1>
-          <p className="text-slate-500 mt-2">Analyze Facebook page comments using Apify and Gemini AI.</p>
         </header>
 
         {error && (
@@ -114,72 +164,89 @@ export default function Home() {
         )}
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h2 className="text-xl font-semibold mb-4">New Analysis</h2>
+          <div className="flex border-b mb-6">
+            <button className={`px-4 py-2 font-medium ${activeTab === 'BOTH' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("BOTH")}>Scrape & Analyze</button>
+            <button className={`px-4 py-2 font-medium ${activeTab === 'SCRAPE' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("SCRAPE")}>Scrape Only</button>
+            <button className={`px-4 py-2 font-medium ${activeTab === 'ANALYZE' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("ANALYZE")}>Analyze Previous</button>
+          </div>
           
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Facebook Page URL</label>
-              <input 
-                type="url" 
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://www.facebook.com/ExamplePage"
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Select Predefined Prompt</label>
-              <select 
-                className="w-full p-2 border rounded-md mb-2 bg-slate-50"
-                onChange={(e) => {
-                  const p = prompts.find(p => p.id === e.target.value);
-                  if (p) setPromptContent(p.content);
-                }}
-              >
-                <option value="">-- Custom Prompt --</option>
-                {prompts.map(p => (
-                  <option key={p.id} value={p.id}>{p.title}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Analysis Prompt</label>
-              <textarea 
-                value={promptContent}
-                onChange={(e) => setPromptContent(e.target.value)}
-                rows={4}
-                className="w-full p-2 border rounded-md"
-                placeholder="e.g. Summarize the top 3 complaints from the comments..."
-              />
-            </div>
-
-            <div className="flex gap-2 items-end">
-              <div className="flex-1">
-                <input 
-                  type="text" 
-                  value={promptTitle}
-                  onChange={(e) => setPromptTitle(e.target.value)}
-                  placeholder="Prompt Title (to save)"
-                  className="w-full p-2 border rounded-md text-sm"
-                />
+          <div className="space-y-6">
+            
+            {(activeTab === "SCRAPE" || activeTab === "BOTH") && (
+              <div className="p-4 bg-slate-50 rounded-lg space-y-4">
+                <h3 className="font-semibold flex items-center gap-2"><Database size={18} /> Data Source</h3>
+                <div>
+                  <select 
+                    className="w-full p-2 border rounded-md mb-2 bg-white"
+                    onChange={(e) => {
+                      const u = urls.find(x => x.id === e.target.value);
+                      if (u) setUrl(u.url);
+                    }}
+                  >
+                    <option value="">-- Select Saved URL --</option>
+                    {urls.map(u => <option key={u.id} value={u.id}>{u.title} ({u.url})</option>)}
+                  </select>
+                  <input 
+                    type="url" value={url} onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://www.facebook.com/groups/..."
+                    className="w-full p-2 border rounded-md mb-2"
+                  />
+                  <div className="flex gap-2 items-end">
+                    <input type="text" value={savedUrlTitle} onChange={(e) => setSavedUrlTitle(e.target.value)} placeholder="URL Title (to save)" className="flex-1 p-2 border rounded-md text-sm" />
+                    <button onClick={handleSaveUrl} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"><Save size={16} /> Save URL</button>
+                  </div>
+                </div>
               </div>
-              <button 
-                onClick={handleSavePrompt}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"
-              >
-                <Save size={16} /> Save Prompt
-              </button>
-            </div>
+            )}
+
+            {activeTab === "ANALYZE" && (
+              <div className="p-4 bg-slate-50 rounded-lg space-y-4">
+                <h3 className="font-semibold flex items-center gap-2"><Database size={18} /> Select Data to Analyze</h3>
+                <div className="max-h-48 overflow-y-auto border bg-white rounded-md p-2 space-y-2">
+                  {completedScrapes.length === 0 ? <p className="text-sm text-slate-500 p-2">No completed scrape jobs available.</p> : null}
+                  {completedScrapes.map(scrape => (
+                    <label key={scrape.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer">
+                      <input type="checkbox" checked={selectedSourceJobs.includes(scrape.id)} onChange={() => toggleSourceJob(scrape.id)} />
+                      <span className="text-sm font-medium">{scrape.title}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(activeTab === "ANALYZE" || activeTab === "BOTH") && (
+              <div className="p-4 bg-slate-50 rounded-lg space-y-4">
+                <h3 className="font-semibold flex items-center gap-2"><BarChart2 size={18} /> Analysis Instructions</h3>
+                <div>
+                  <select 
+                    className="w-full p-2 border rounded-md mb-2 bg-white"
+                    onChange={(e) => {
+                      const p = prompts.find(p => p.id === e.target.value);
+                      if (p) setPromptContent(p.content);
+                    }}
+                  >
+                    <option value="">-- Select Saved Prompt --</option>
+                    {prompts.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                  </select>
+                  <textarea 
+                    value={promptContent} onChange={(e) => setPromptContent(e.target.value)} rows={4}
+                    className="w-full p-2 border rounded-md mb-2" placeholder="e.g. Summarize the top 3 complaints..."
+                  />
+                  <div className="flex gap-2 items-end">
+                    <input type="text" value={promptTitle} onChange={(e) => setPromptTitle(e.target.value)} placeholder="Prompt Title (to save)" className="flex-1 p-2 border rounded-md text-sm" />
+                    <button onClick={handleSavePrompt} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"><Save size={16} /> Save Prompt</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <button 
-              onClick={handleStartAnalysis}
+              onClick={() => handleSubmit(activeTab === "BOTH" ? "SCRAPE_AND_ANALYZE" : activeTab)}
               disabled={isSubmitting}
-              className="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex justify-center items-center gap-2 disabled:opacity-50 transition-colors"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex justify-center items-center gap-2 disabled:opacity-50"
             >
               {isSubmitting ? <Clock className="animate-spin" /> : <Search />}
-              {isSubmitting ? 'Processing...' : 'Start Analysis'}
+              {isSubmitting ? 'Processing...' : activeTab === 'SCRAPE' ? 'Start Scraping' : activeTab === 'ANALYZE' ? 'Analyze Selected Data' : 'Scrape & Analyze'}
             </button>
           </div>
         </div>
@@ -187,31 +254,36 @@ export default function Home() {
         {job && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              Job Status: 
+              {job.title}
               <span className={`text-sm px-2 py-1 rounded-full ${
                 job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                job.status === 'FAILED' ? 'bg-red-100 text-red-700' :
-                'bg-blue-100 text-blue-700'
-              }`}>
-                {job.status}
-              </span>
+                job.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+              }`}>{job.status}</span>
             </h2>
             
-            {job.status === 'COMPLETED' && job.resultReport && (
-              <div className="mt-6 prose prose-slate max-w-none prose-h2:text-blue-600 border-t pt-6">
+            {job.status === 'COMPLETED' && job.type !== 'SCRAPE' && job.resultReport && (
+              <div className="mt-6 prose prose-slate max-w-none border-t pt-6">
                 <ReactMarkdown>{job.resultReport}</ReactMarkdown>
+              </div>
+            )}
+
+            {job.status === 'COMPLETED' && job.type === 'SCRAPE' && job.rawScrapeData && (
+              <div className="mt-6 border-t pt-6">
+                <p className="mb-2 text-sm font-medium text-slate-600">Raw Data Preview:</p>
+                <div className="max-h-96 overflow-y-auto bg-slate-900 text-green-400 p-4 rounded-md text-xs font-mono">
+                  <pre>{JSON.stringify(JSON.parse(job.rawScrapeData), null, 2)}</pre>
+                </div>
               </div>
             )}
             
             {job.status !== 'COMPLETED' && job.status !== 'FAILED' && (
               <div className="flex items-center gap-3 text-slate-500 py-8 justify-center">
                 <Clock className="animate-spin text-blue-500" /> 
-                This might take a few minutes. Please wait...
+                {job.status === 'SCRAPING' ? 'Scraping data from Facebook. This may take several minutes...' : 'AI is analyzing the data...'}
               </div>
             )}
           </div>
         )}
-
       </div>
     </main>
   );

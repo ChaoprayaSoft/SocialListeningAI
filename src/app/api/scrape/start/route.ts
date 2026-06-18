@@ -2,44 +2,99 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ApifyClient } from "apify-client";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Input validation schema
 const startScrapeSchema = z.object({
-  url: z.string().url("Invalid Facebook URL"),
-  promptContent: z.string().min(1, "Prompt cannot be empty").max(2000, "Prompt is too long"),
+  type: z.enum(["SCRAPE", "ANALYZE", "SCRAPE_AND_ANALYZE"]).default("SCRAPE_AND_ANALYZE"),
+  url: z.string().url("Invalid URL").optional().or(z.literal("")),
+  promptContent: z.string().optional().or(z.literal("")),
+  sourceJobIds: z.array(z.string()).optional(),
 });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    // 1. Validate Input
     const parsed = startScrapeSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
     }
 
-    const { url, promptContent } = parsed.data;
+    const { type, url, promptContent, sourceJobIds } = parsed.data;
 
-    // 2. Create Job in DB
+    const titlePrefix = type === "ANALYZE" ? "Analysis" : type === "SCRAPE" ? "Scrape" : "Scrape & Analyze";
+    const title = `${titlePrefix} ${new Date().toLocaleString('en-GB')}`;
+
     const job = await prisma.job.create({
       data: {
-        url,
-        promptContent,
-        status: "SCRAPING",
+        title,
+        type,
+        url: url || null,
+        promptContent: promptContent || null,
+        sourceJobIds: sourceJobIds || [],
+        status: type === "ANALYZE" ? "ANALYZING" : "SCRAPING",
       },
     });
 
-    // 3. Trigger Apify Actor
-    const apifyClient = new ApifyClient({
-      token: process.env.APIFY_API_TOKEN,
-    });
+    if (type === "ANALYZE") {
+      // Run Gemini immediately (Inline)
+      if (!sourceJobIds || sourceJobIds.length === 0) {
+        throw new Error("Missing source jobs for analysis");
+      }
+      
+      // Fetch raw data from selected jobs
+      const sourceJobs = await prisma.job.findMany({
+        where: { id: { in: sourceJobIds } }
+      });
+      
+      const combinedRawData = sourceJobs
+        .filter(j => j.rawScrapeData)
+        .map(j => JSON.parse(j.rawScrapeData!))
+        .flat();
 
-    // We use the Facebook Pages Scraper Actor (e.g. apify/facebook-pages-scraper or similar)
-    // Note: The specific actor ID depends on your Apify setup.
-    const actorId = process.env.APIFY_ACTOR_ID || "apify/facebook-pages-scraper";
+      if (combinedRawData.length === 0) {
+        await prisma.job.update({ where: { id: job.id }, data: { status: "FAILED", resultReport: "No raw data found in selected jobs." }});
+        return NextResponse.json({ jobId: job.id, status: "success" });
+      }
+
+      // Do not await the analysis to prevent Vercel timeout - run it asynchronously if possible
+      // In standard Node (local), this works. On Vercel, it might get killed after response.
+      // But we will try to run it inline and just return the result because returning a response kills the lambda.
+      // We will await it inline.
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+
+      const promptText = `
+        You are an AI Social Listening Analyst.
+        User Prompt/Instructions: ${promptContent}
+        
+        Analyze the following social media data (posts and comments) from multiple scraping runs and generate a detailed Markdown report:
+        ---
+        ${JSON.stringify(combinedRawData, null, 2)}
+        ---
+      `;
+
+      try {
+        const result = await model.generateContent(promptText);
+        const reportMarkdown = result.response.text();
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { status: "COMPLETED", resultReport: reportMarkdown },
+        });
+      } catch (aiError) {
+        console.error("Gemini Error:", aiError);
+        await prisma.job.update({
+          where: { id: job.id },
+          data: { status: "FAILED", resultReport: "AI Analysis failed." },
+        });
+      }
+      
+      return NextResponse.json({ jobId: job.id, status: "success" });
+    }
+
+    // For SCRAPE and SCRAPE_AND_ANALYZE, trigger Apify
+    const apifyClient = new ApifyClient({ token: process.env.APIFY_API_TOKEN });
+    const actorId = process.env.APIFY_ACTOR_ID || "apify/facebook-groups-scraper";
     
-    // Construct Webhook URL (must be absolute)
     let baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
       baseUrl = `https://${baseUrl}`;
@@ -63,7 +118,6 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // 4. Update Job with Apify Run ID
     await prisma.job.update({
       where: { id: job.id },
       data: { apifyRunId: run.id },
