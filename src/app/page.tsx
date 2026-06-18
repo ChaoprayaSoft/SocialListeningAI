@@ -19,10 +19,12 @@ type Job = {
 export default function Home() {
   const [url, setUrl] = useState("");
   const [savedUrlTitle, setSavedUrlTitle] = useState("");
+  const [selectedUrlId, setSelectedUrlId] = useState("");
   const [urls, setUrls] = useState<SavedUrl[]>([]);
 
   const [promptContent, setPromptContent] = useState("");
   const [promptTitle, setPromptTitle] = useState(""); 
+  const [selectedPromptId, setSelectedPromptId] = useState("");
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   
   const [completedScrapes, setCompletedScrapes] = useState<Job[]>([]);
@@ -117,8 +119,38 @@ export default function Home() {
       if (res.ok) {
         const newPrompt = await res.json();
         setPrompts([newPrompt, ...prompts]);
-        setPromptTitle("");
+        setSelectedPromptId(newPrompt.id);
         alert("Prompt saved!");
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleUpdatePrompt = async () => {
+    if (!selectedPromptId || !promptTitle || !promptContent) return alert("Select a prompt and ensure fields are filled");
+    try {
+      const res = await fetch(`/api/prompts/${selectedPromptId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: promptTitle, content: promptContent }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPrompts(prompts.map(p => p.id === updated.id ? updated : p));
+        alert("Prompt updated!");
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeletePrompt = async () => {
+    if (!selectedPromptId) return;
+    if (!confirm("Delete this prompt?")) return;
+    try {
+      const res = await fetch(`/api/prompts/${selectedPromptId}`, { method: "DELETE" });
+      if (res.ok) {
+        setPrompts(prompts.filter(p => p.id !== selectedPromptId));
+        setSelectedPromptId("");
+        setPromptTitle("");
+        setPromptContent("");
       }
     } catch (e) { console.error(e); }
   };
@@ -134,8 +166,38 @@ export default function Home() {
       if (res.ok) {
         const newUrl = await res.json();
         setUrls([newUrl, ...urls]);
-        setSavedUrlTitle("");
+        setSelectedUrlId(newUrl.id);
         alert("URL saved!");
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateUrl = async () => {
+    if (!selectedUrlId || !savedUrlTitle || !url) return alert("Select a URL and ensure fields are filled");
+    try {
+      const res = await fetch(`/api/urls/${selectedUrlId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: savedUrlTitle, url: url }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setUrls(urls.map(u => u.id === updated.id ? updated : u));
+        alert("URL updated!");
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteUrl = async () => {
+    if (!selectedUrlId) return;
+    if (!confirm("Delete this URL?")) return;
+    try {
+      const res = await fetch(`/api/urls/${selectedUrlId}`, { method: "DELETE" });
+      if (res.ok) {
+        setUrls(urls.filter(u => u.id !== selectedUrlId));
+        setSelectedUrlId("");
+        setSavedUrlTitle("");
+        setUrl("");
       }
     } catch (e) { console.error(e); }
   };
@@ -178,12 +240,19 @@ export default function Home() {
                 <div>
                   <select 
                     className="w-full p-2 border rounded-md mb-2 bg-white"
+                    value={selectedUrlId}
                     onChange={(e) => {
-                      const u = urls.find(x => x.id === e.target.value);
-                      if (u) setUrl(u.url);
+                      const id = e.target.value;
+                      setSelectedUrlId(id);
+                      if (id) {
+                        const u = urls.find(x => x.id === id);
+                        if (u) { setUrl(u.url); setSavedUrlTitle(u.title); }
+                      } else {
+                        setUrl(""); setSavedUrlTitle("");
+                      }
                     }}
                   >
-                    <option value="">-- Select Saved URL --</option>
+                    <option value="">-- Create New URL --</option>
                     {urls.map(u => <option key={u.id} value={u.id}>{u.title} ({u.url})</option>)}
                   </select>
                   <input 
@@ -192,8 +261,16 @@ export default function Home() {
                     className="w-full p-2 border rounded-md mb-2"
                   />
                   <div className="flex gap-2 items-end">
-                    <input type="text" value={savedUrlTitle} onChange={(e) => setSavedUrlTitle(e.target.value)} placeholder="URL Title (to save)" className="flex-1 p-2 border rounded-md text-sm" />
-                    <button onClick={handleSaveUrl} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"><Save size={16} /> Save URL</button>
+                    <input type="text" value={savedUrlTitle} onChange={(e) => setSavedUrlTitle(e.target.value)} placeholder="URL Title" className="flex-1 p-2 border rounded-md text-sm" />
+                    {!selectedUrlId ? (
+                      <button onClick={handleSaveUrl} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"><Save size={16} /> Save</button>
+                    ) : (
+                      <>
+                        <button onClick={handleUpdateUrl} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-md text-sm font-medium">Update</button>
+                        <button onClick={handleDeleteUrl} className="px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-md text-sm font-medium">Delete</button>
+                        <button onClick={() => { setSelectedUrlId(""); setUrl(""); setSavedUrlTitle(""); }} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium">Cancel</button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -220,12 +297,19 @@ export default function Home() {
                 <div>
                   <select 
                     className="w-full p-2 border rounded-md mb-2 bg-white"
+                    value={selectedPromptId}
                     onChange={(e) => {
-                      const p = prompts.find(p => p.id === e.target.value);
-                      if (p) setPromptContent(p.content);
+                      const id = e.target.value;
+                      setSelectedPromptId(id);
+                      if (id) {
+                        const p = prompts.find(x => x.id === id);
+                        if (p) { setPromptContent(p.content); setPromptTitle(p.title); }
+                      } else {
+                        setPromptContent(""); setPromptTitle("");
+                      }
                     }}
                   >
-                    <option value="">-- Select Saved Prompt --</option>
+                    <option value="">-- Create New Prompt --</option>
                     {prompts.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                   </select>
                   <textarea 
@@ -233,8 +317,16 @@ export default function Home() {
                     className="w-full p-2 border rounded-md mb-2" placeholder="e.g. Summarize the top 3 complaints..."
                   />
                   <div className="flex gap-2 items-end">
-                    <input type="text" value={promptTitle} onChange={(e) => setPromptTitle(e.target.value)} placeholder="Prompt Title (to save)" className="flex-1 p-2 border rounded-md text-sm" />
-                    <button onClick={handleSavePrompt} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"><Save size={16} /> Save Prompt</button>
+                    <input type="text" value={promptTitle} onChange={(e) => setPromptTitle(e.target.value)} placeholder="Prompt Title" className="flex-1 p-2 border rounded-md text-sm" />
+                    {!selectedPromptId ? (
+                      <button onClick={handleSavePrompt} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"><Save size={16} /> Save</button>
+                    ) : (
+                      <>
+                        <button onClick={handleUpdatePrompt} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-md text-sm font-medium">Update</button>
+                        <button onClick={handleDeletePrompt} className="px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-md text-sm font-medium">Delete</button>
+                        <button onClick={() => { setSelectedPromptId(""); setPromptContent(""); setPromptTitle(""); }} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium">Cancel</button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
