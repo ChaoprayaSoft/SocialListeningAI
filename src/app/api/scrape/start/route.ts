@@ -48,9 +48,9 @@ export async function POST(req: NextRequest) {
 
     const run = await apifyClient.actor(actorId).start(
       {
-        startUrls: [{ url }],
-        maxPosts: 10, // Default limit to save cost/time
-        scrapeComments: true,
+        startUrls: [{ url, method: "GET" }],
+        resultsLimit: 20,
+        viewOption: "CHRONOLOGICAL",
       },
       {
         webhooks: [
