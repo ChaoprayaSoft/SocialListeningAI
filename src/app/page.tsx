@@ -247,10 +247,10 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 p-8 font-sans text-slate-900">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <main className="min-h-screen bg-slate-50 p-8 font-sans text-slate-900 print:bg-white print:p-0">
+      <div className="max-w-4xl mx-auto space-y-8 print:space-y-0 print:max-w-none">
         
-        <header className="mb-8 border-b pb-4">
+        <header className="mb-8 border-b pb-4 print:hidden">
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Activity className="text-blue-600" />
             AI Satisfaction Management
@@ -258,12 +258,12 @@ export default function Home() {
         </header>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-2">
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-2 print:hidden">
             <AlertTriangle size={20} /> {error}
           </div>
         )}
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print:hidden">
           <div className="flex border-b mb-6">
             <button className={`px-4 py-2 font-medium ${activeTab === 'BOTH' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("BOTH")}>Scrape & Analyze</button>
             <button className={`px-4 py-2 font-medium ${activeTab === 'SCRAPE' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("SCRAPE")}>Scrape Only</button>
@@ -432,18 +432,18 @@ export default function Home() {
         </div>
 
         {job && (
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative print:p-0 print:border-none print:shadow-none">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               {job.title}
-              <span className={`text-sm px-2 py-1 rounded-full ${
+              <span className={`text-sm px-2 py-1 rounded-full print:hidden ${
                 job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                 job.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
               }`}>{job.status}</span>
             </h2>
             
             {job.status === 'COMPLETED' && job.type !== 'SCRAPE' && job.resultReport && (
-              <div className="mt-6 border-t pt-6 relative">
-                <div className="flex justify-end mb-4 no-print">
+              <div className="mt-6 border-t pt-6 relative print:border-t-0 print:pt-0">
+                <div className="flex justify-end mb-4 print:hidden">
                   <button 
                     onClick={() => window.print()}
                     className="px-4 py-2 bg-slate-800 text-white rounded-md text-sm flex items-center gap-2 hover:bg-slate-700"
@@ -451,7 +451,7 @@ export default function Home() {
                     <FileText size={16} /> Export as PDF
                   </button>
                 </div>
-                <div id="printable-report" className="prose prose-slate max-w-none bg-white p-4">
+                <div id="printable-report" className="prose prose-slate max-w-none bg-white p-4 print:p-0">
                   <ReactMarkdown>{job.resultReport}</ReactMarkdown>
                 </div>
               </div>

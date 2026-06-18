@@ -25,23 +25,3 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #printable-report, #printable-report * {
-    visibility: visible;
-  }
-  #printable-report {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  .no-print {
-    display: none !important;
-  }
-}
