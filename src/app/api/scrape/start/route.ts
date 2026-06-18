@@ -8,6 +8,7 @@ const startScrapeSchema = z.object({
   type: z.enum(["SCRAPE", "ANALYZE", "SCRAPE_AND_ANALYZE"]).default("SCRAPE_AND_ANALYZE"),
   url: z.string().url("Invalid URL").optional().or(z.literal("")),
   promptContent: z.string().optional().or(z.literal("")),
+  aiModel: z.string().default("gemini-1.5-pro-latest"),
   sourceJobIds: z.array(z.string()).optional(),
   resultsLimit: z.number().min(1).max(100).default(20),
   viewOption: z.string().default("CHRONOLOGICAL"),
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
     }
 
-    const { type, url, promptContent, sourceJobIds, resultsLimit, viewOption } = parsed.data;
+    const { type, url, promptContent, aiModel, sourceJobIds, resultsLimit, viewOption } = parsed.data;
 
     const titlePrefix = type === "ANALYZE" ? "Analysis" : type === "SCRAPE" ? "Scrape" : "Scrape & Analyze";
     const title = `${titlePrefix} ${new Date().toLocaleString('en-GB')}`;
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
         type,
         url: url || null,
         promptContent: promptContent || null,
+        aiModel,
         sourceJobIds: sourceJobIds || [],
         status: type === "ANALYZE" ? "ANALYZING" : "SCRAPING",
       },
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
       // But we will try to run it inline and just return the result because returning a response kills the lambda.
       // We will await it inline.
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+      const model = genAI.getGenerativeModel({ model: aiModel });
 
       const promptText = `
         You are an AI Social Listening Analyst.

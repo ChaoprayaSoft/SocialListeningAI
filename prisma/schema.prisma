@@ -34,6 +34,7 @@ model Job {
   type          String   @default("SCRAPE_AND_ANALYZE") // SCRAPE, ANALYZE, SCRAPE_AND_ANALYZE
   url           String?  // Optional for ANALYZE type
   promptContent String?  // Optional for SCRAPE type
+  aiModel       String?  @default("gemini-1.5-pro-latest")
   apifyRunId    String?
   sourceJobIds  String[] // IDs of SCRAPE jobs used for this ANALYZE job
   status        String   @default("PENDING") // PENDING, SCRAPING, ANALYZING, COMPLETED, FAILED

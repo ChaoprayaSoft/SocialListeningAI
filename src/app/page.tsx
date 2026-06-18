@@ -34,6 +34,7 @@ export default function Home() {
 
   const [resultsLimit, setResultsLimit] = useState(20);
   const [viewOption, setViewOption] = useState("CHRONOLOGICAL");
+  const [aiModel, setAiModel] = useState("gemini-1.5-pro-latest");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -100,6 +101,7 @@ export default function Home() {
           promptContent,
           resultsLimit,
           viewOption,
+          aiModel,
           sourceJobIds: type === "ANALYZE" ? selectedSourceJobs : undefined 
         }),
       });
@@ -355,6 +357,17 @@ export default function Home() {
                         <button onClick={() => { setSelectedPromptId(""); setPromptContent(""); setPromptTitle(""); }} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium">Cancel</button>
                       </>
                     )}
+                  </div>
+                  
+                  <div className="mt-4 bg-white p-3 rounded-md border">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">🧠 Select AI Model</label>
+                    <select 
+                      value={aiModel} onChange={(e) => setAiModel(e.target.value)}
+                      className="w-full p-2 border rounded-md text-sm bg-white"
+                    >
+                      <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Most Capable)</option>
+                      <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Fastest & Cost-effective)</option>
+                    </select>
                   </div>
                 </div>
               </div>
