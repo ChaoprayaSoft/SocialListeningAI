@@ -40,8 +40,10 @@ export async function POST(req: NextRequest) {
     const actorId = process.env.APIFY_ACTOR_ID || "apify/facebook-pages-scraper";
     
     // Construct Webhook URL (must be absolute)
-    // For local dev, you would need Ngrok. In production, it's the VERCEL_URL.
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+      baseUrl = `https://${baseUrl}`;
+    }
     const webhookUrl = `${baseUrl}/api/scrape/webhook`;
 
     const run = await apifyClient.actor(actorId).start(
