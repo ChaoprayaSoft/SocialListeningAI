@@ -82,11 +82,11 @@ export async function POST(req: NextRequest) {
           where: { id: job.id },
           data: { status: "COMPLETED", resultReport: reportMarkdown },
         });
-      } catch (aiError) {
+      } catch (aiError: any) {
         console.error("Gemini Error:", aiError);
         await prisma.job.update({
           where: { id: job.id },
-          data: { status: "FAILED", resultReport: "AI Analysis failed." },
+          data: { status: "FAILED", resultReport: `AI Analysis failed: ${aiError.message || "Unknown Error"}` },
         });
       }
       
