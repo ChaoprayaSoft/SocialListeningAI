@@ -35,6 +35,7 @@ export default function Home() {
   const [resultsLimit, setResultsLimit] = useState(20);
   const [viewOption, setViewOption] = useState("CHRONOLOGICAL");
   const [aiModel, setAiModel] = useState("gemini-1.5-pro");
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -42,6 +43,16 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    fetch("/api/models").then(res => res.json()).then(data => {
+      if (Array.isArray(data)) {
+        setAvailableModels(data);
+        // Auto select a good default if available
+        const proModel = data.find(m => m.name.includes("gemini-1.5-pro"));
+        if (proModel) setAiModel(proModel.name.replace("models/", ""));
+        else if (data.length > 0) setAiModel(data[0].name.replace("models/", ""));
+      }
+    }).catch(console.error);
+
     fetch("/api/prompts").then(res => res.json()).then(data => {
       if (Array.isArray(data)) setPrompts(data);
     }).catch(console.error);
@@ -390,13 +401,20 @@ export default function Home() {
                   
                   <div className="mt-4 bg-white p-3 rounded-md border">
                     <label className="block text-xs font-medium text-slate-500 mb-1">🧠 Select AI Model</label>
-                    <select 
-                      value={aiModel} onChange={(e) => setAiModel(e.target.value)}
-                      className="w-full p-2 border rounded-md text-sm bg-white"
-                    >
-                      <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced)</option>
-                      <option value="gemini-1.5-pro">Gemini 1.5 Pro (Most Capable)</option>
-                    </select>
+                    {availableModels.length > 0 ? (
+                      <select 
+                        value={aiModel} onChange={(e) => setAiModel(e.target.value)}
+                        className="w-full p-2 border rounded-md text-sm bg-white"
+                      >
+                        {availableModels.map(m => (
+                          <option key={m.name} value={m.name.replace('models/', '')}>
+                            {m.displayName} ({m.name.replace('models/', '')})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="text-xs text-slate-500 italic">Loading models from Google...</div>
+                    )}
                   </div>
                 </div>
               </div>
