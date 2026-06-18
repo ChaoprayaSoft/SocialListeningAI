@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
             eventTypes: ["ACTOR.RUN.SUCCEEDED"],
             requestUrl: webhookUrl,
             payloadTemplate: `{"runId": "{{resource.id}}", "jobId": "${job.id}", "secret": "${process.env.WEBHOOK_SECRET}"}`,
+            shouldInterpolateStrings: true,
           },
         ],
       }

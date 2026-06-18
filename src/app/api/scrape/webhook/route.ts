@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const run = await apifyClient.run(runId).get();
     
     if (!run || !run.defaultDatasetId) {
-       await prisma.job.update({ where: { id: jobId }, data: { status: "FAILED", resultReport: "Apify run invalid or has no dataset." } });
+       await prisma.job.update({ where: { id: jobId }, data: { status: "FAILED", resultReport: `Apify run invalid or has no dataset. Run: ${JSON.stringify(run)}` } });
        return NextResponse.json({ error: "Apify run invalid" }, { status: 400 });
     }
 
