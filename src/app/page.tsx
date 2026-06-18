@@ -34,7 +34,7 @@ export default function Home() {
 
   const [resultsLimit, setResultsLimit] = useState(20);
   const [viewOption, setViewOption] = useState("CHRONOLOGICAL");
-  const [aiModel, setAiModel] = useState("gemini-1.5-pro-latest");
+  const [aiModel, setAiModel] = useState("gemini-1.5-pro");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -367,8 +367,8 @@ export default function Home() {
                     >
                       <option value="gemini-3.0-pro">Gemini 3.0 Pro (Next-Gen)</option>
                       <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced)</option>
-                      <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Most Capable)</option>
-                      <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Fastest & Cost-effective)</option>
+                      <option value="gemini-1.5-pro">Gemini 1.5 Pro (Most Capable)</option>
+                      <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fastest & Cost-effective)</option>
                     </select>
                   </div>
                 </div>

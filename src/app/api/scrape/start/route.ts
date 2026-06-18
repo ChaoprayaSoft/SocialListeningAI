@@ -8,7 +8,7 @@ const startScrapeSchema = z.object({
   type: z.enum(["SCRAPE", "ANALYZE", "SCRAPE_AND_ANALYZE"]).default("SCRAPE_AND_ANALYZE"),
   url: z.string().url("Invalid URL").optional().or(z.literal("")),
   promptContent: z.string().optional().or(z.literal("")),
-  aiModel: z.string().default("gemini-1.5-pro-latest"),
+  aiModel: z.string().default("gemini-1.5-pro"),
   sourceJobIds: z.array(z.string()).optional(),
   resultsLimit: z.number().min(1).max(100).default(20),
   viewOption: z.string().default("CHRONOLOGICAL"),

@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     // Send to Gemini
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: job.aiModel || "gemini-1.5-pro-latest" });
+    const model = genAI.getGenerativeModel({ model: job.aiModel || "gemini-1.5-pro" });
 
     const promptText = `
       You are an AI Social Listening Analyst.
