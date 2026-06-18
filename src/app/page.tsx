@@ -32,6 +32,9 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState<"SCRAPE" | "ANALYZE" | "BOTH">("BOTH");
 
+  const [resultsLimit, setResultsLimit] = useState(20);
+  const [viewOption, setViewOption] = useState("CHRONOLOGICAL");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<Job | null>(null);
@@ -95,6 +98,8 @@ export default function Home() {
           type, 
           url, 
           promptContent,
+          resultsLimit,
+          viewOption,
           sourceJobIds: type === "ANALYZE" ? selectedSourceJobs : undefined 
         }),
       });
@@ -258,8 +263,31 @@ export default function Home() {
                   <input 
                     type="url" value={url} onChange={(e) => setUrl(e.target.value)}
                     placeholder="https://www.facebook.com/groups/..."
-                    className="w-full p-2 border rounded-md mb-2"
+                    className="w-full p-2 border rounded-md mb-4"
                   />
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4 bg-white p-3 rounded-md border">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">✍️ Number of Posts</label>
+                      <input 
+                        type="number" min="1" max="100" 
+                        value={resultsLimit} onChange={(e) => setResultsLimit(parseInt(e.target.value) || 20)}
+                        className="w-full p-2 border rounded-md text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">📜 Sorting Order</label>
+                      <select 
+                        value={viewOption} onChange={(e) => setViewOption(e.target.value)}
+                        className="w-full p-2 border rounded-md text-sm bg-white"
+                      >
+                        <option value="CHRONOLOGICAL">New Posts (Chronological)</option>
+                        <option value="RECENT_ACTIVITY">Newest Activity (Recent Comments)</option>
+                        <option value="TOP_POSTS">Top Posts</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="flex gap-2 items-end">
                     <input type="text" value={savedUrlTitle} onChange={(e) => setSavedUrlTitle(e.target.value)} placeholder="URL Title" className="flex-1 p-2 border rounded-md text-sm" />
                     {!selectedUrlId ? (

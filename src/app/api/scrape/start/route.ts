@@ -9,6 +9,8 @@ const startScrapeSchema = z.object({
   url: z.string().url("Invalid URL").optional().or(z.literal("")),
   promptContent: z.string().optional().or(z.literal("")),
   sourceJobIds: z.array(z.string()).optional(),
+  resultsLimit: z.number().min(1).max(100).default(20),
+  viewOption: z.string().default("CHRONOLOGICAL"),
 });
 
 export async function POST(req: NextRequest) {
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
     }
 
-    const { type, url, promptContent, sourceJobIds } = parsed.data;
+    const { type, url, promptContent, sourceJobIds, resultsLimit, viewOption } = parsed.data;
 
     const titlePrefix = type === "ANALYZE" ? "Analysis" : type === "SCRAPE" ? "Scrape" : "Scrape & Analyze";
     const title = `${titlePrefix} ${new Date().toLocaleString('en-GB')}`;
@@ -104,8 +106,8 @@ export async function POST(req: NextRequest) {
     const run = await apifyClient.actor(actorId).start(
       {
         startUrls: [{ url, method: "GET" }],
-        resultsLimit: 20,
-        viewOption: "CHRONOLOGICAL",
+        resultsLimit,
+        viewOption,
       },
       {
         webhooks: [
