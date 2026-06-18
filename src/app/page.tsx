@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Activity, AlertTriangle, Clock, Search, Save, Database, BarChart2 } from "lucide-react";
+import { Activity, AlertTriangle, Clock, Search, Save, Database, BarChart2, Download, FileText } from "lucide-react";
 
 type Prompt = { id: string; title: string; content: string };
 type SavedUrl = { id: string; title: string; url: string };
@@ -58,6 +58,26 @@ export default function Home() {
       if (Array.isArray(data)) setCompletedScrapes(data);
     }).catch(console.error);
   }
+
+  const handleExportSelectedJson = () => {
+    if (selectedSourceJobs.length === 0) return alert("Please select at least one scrape job to export.");
+    
+    const selectedData = completedScrapes
+      .filter(j => selectedSourceJobs.includes(j.id))
+      .filter(j => j.rawScrapeData)
+      .map(j => JSON.parse(j.rawScrapeData!))
+      .flat();
+      
+    if (selectedData.length === 0) return alert("No raw data found in the selected jobs.");
+
+    const blob = new Blob([JSON.stringify(selectedData, null, 2)], { type: "application/json" });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = `exported_scrapes_${new Date().getTime()}.json`;
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -308,7 +328,16 @@ export default function Home() {
 
             {activeTab === "ANALYZE" && (
               <div className="p-4 bg-slate-50 rounded-lg space-y-4">
-                <h3 className="font-semibold flex items-center gap-2"><Database size={18} /> Select Data to Analyze</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold flex items-center gap-2"><Database size={18} /> Select Data to Analyze</h3>
+                  <button 
+                    onClick={handleExportSelectedJson}
+                    disabled={selectedSourceJobs.length === 0}
+                    className="text-sm px-3 py-1 bg-white border rounded-md text-slate-700 hover:bg-slate-100 flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <Download size={14} /> Export Selected to JSON
+                  </button>
+                </div>
                 <div className="max-h-48 overflow-y-auto border bg-white rounded-md p-2 space-y-2">
                   {completedScrapes.length === 0 ? <p className="text-sm text-slate-500 p-2">No completed scrape jobs available.</p> : null}
                   {completedScrapes.map(scrape => (
@@ -386,7 +415,7 @@ export default function Home() {
         </div>
 
         {job && (
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               {job.title}
               <span className={`text-sm px-2 py-1 rounded-full ${
@@ -396,8 +425,18 @@ export default function Home() {
             </h2>
             
             {job.status === 'COMPLETED' && job.type !== 'SCRAPE' && job.resultReport && (
-              <div className="mt-6 prose prose-slate max-w-none border-t pt-6">
-                <ReactMarkdown>{job.resultReport}</ReactMarkdown>
+              <div className="mt-6 border-t pt-6 relative">
+                <div className="flex justify-end mb-4 no-print">
+                  <button 
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-slate-800 text-white rounded-md text-sm flex items-center gap-2 hover:bg-slate-700"
+                  >
+                    <FileText size={16} /> Export as PDF
+                  </button>
+                </div>
+                <div id="printable-report" className="prose prose-slate max-w-none bg-white p-4">
+                  <ReactMarkdown>{job.resultReport}</ReactMarkdown>
+                </div>
               </div>
             )}
 
@@ -409,7 +448,23 @@ export default function Home() {
 
             {job.status === 'COMPLETED' && job.type === 'SCRAPE' && job.rawScrapeData && (
               <div className="mt-6 border-t pt-6">
-                <p className="mb-2 text-sm font-medium text-slate-600">Raw Data Preview:</p>
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm font-medium text-slate-600">Raw Data Preview:</p>
+                  <button 
+                    onClick={() => {
+                      const blob = new Blob([job.rawScrapeData!], { type: "application/json" });
+                      const blobUrl = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = blobUrl;
+                      a.download = `scrape_${job.id}.json`;
+                      a.click();
+                      URL.revokeObjectURL(blobUrl);
+                    }}
+                    className="text-sm px-3 py-1 bg-white border rounded-md text-slate-700 hover:bg-slate-100 flex items-center gap-1"
+                  >
+                    <Download size={14} /> Download JSON
+                  </button>
+                </div>
                 <div className="max-h-96 overflow-y-auto bg-slate-900 text-green-400 p-4 rounded-md text-xs font-mono">
                   <pre>{JSON.stringify(JSON.parse(job.rawScrapeData), null, 2)}</pre>
                 </div>
