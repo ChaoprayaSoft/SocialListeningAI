@@ -396,7 +396,6 @@ export default function Home() {
                     >
                       <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced)</option>
                       <option value="gemini-1.5-pro">Gemini 1.5 Pro (Most Capable)</option>
-                      <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fastest & Cost-effective)</option>
                     </select>
                   </div>
                 </div>
