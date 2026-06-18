@@ -365,7 +365,6 @@ export default function Home() {
                       value={aiModel} onChange={(e) => setAiModel(e.target.value)}
                       className="w-full p-2 border rounded-md text-sm bg-white"
                     >
-                      <option value="gemini-3.0-pro">Gemini 3.0 Pro (Next-Gen)</option>
                       <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced)</option>
                       <option value="gemini-1.5-pro">Gemini 1.5 Pro (Most Capable)</option>
                       <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fastest & Cost-effective)</option>
