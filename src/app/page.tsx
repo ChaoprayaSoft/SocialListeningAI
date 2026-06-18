@@ -188,11 +188,11 @@ export default function Home() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               Job Status: 
-              <span className={\`text-sm px-2 py-1 rounded-full \${
+              <span className={`text-sm px-2 py-1 rounded-full ${
                 job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                 job.status === 'FAILED' ? 'bg-red-100 text-red-700' :
                 'bg-blue-100 text-blue-700'
-              }\`}>
+              }`}>
                 {job.status}
               </span>
             </h2>
