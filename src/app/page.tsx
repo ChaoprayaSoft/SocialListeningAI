@@ -359,6 +359,12 @@ export default function Home() {
               </div>
             )}
 
+            {job.status === 'FAILED' && job.resultReport && (
+              <div className="mt-6 border-t pt-6 text-red-600 bg-red-50 p-4 rounded-md">
+                <strong>Error Details:</strong> {job.resultReport}
+              </div>
+            )}
+
             {job.status === 'COMPLETED' && job.type === 'SCRAPE' && job.rawScrapeData && (
               <div className="mt-6 border-t pt-6">
                 <p className="mb-2 text-sm font-medium text-slate-600">Raw Data Preview:</p>

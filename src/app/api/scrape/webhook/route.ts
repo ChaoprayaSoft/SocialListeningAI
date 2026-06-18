@@ -4,10 +4,13 @@ import { ApifyClient } from "apify-client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
+  let jobId: string | undefined;
+
   try {
     const body = await req.json();
+    jobId = body.jobId;
 
-    const { runId, jobId, secret } = body;
+    const { runId, secret } = body;
 
     // 1. Webhook Security Verification
     if (secret !== process.env.WEBHOOK_SECRET) {
@@ -25,16 +28,21 @@ export async function POST(req: NextRequest) {
     const run = await apifyClient.run(runId).get();
     
     if (!run || !run.defaultDatasetId) {
-       await prisma.job.update({ where: { id: jobId }, data: { status: "FAILED" } });
+       await prisma.job.update({ where: { id: jobId }, data: { status: "FAILED", resultReport: "Apify run invalid or has no dataset." } });
        return NextResponse.json({ error: "Apify run invalid" }, { status: 400 });
     }
 
     const dataset = await apifyClient.dataset(run.defaultDatasetId).listItems();
     
+    if (!dataset.items || dataset.items.length === 0) {
+      await prisma.job.update({ where: { id: jobId }, data: { status: "FAILED", resultReport: "No data scraped from the URL." } });
+      return NextResponse.json({ error: "Empty dataset" }, { status: 400 });
+    }
+
     // Extract textual content
     const extractedData = dataset.items.map((item: any) => ({
-      postText: item.text,
-      comments: item.comments?.map((c: any) => c.text) || [],
+      postText: item.text || item.message || "",
+      comments: item.comments?.map((c: any) => c.text || c.message || "") || [],
     }));
 
     const rawDataString = JSON.stringify(extractedData, null, 2);
@@ -91,12 +99,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "success" });
   } catch (error: any) {
     console.error("Webhook Error:", error);
-    try {
-      const body = await req.json();
-      if (body.jobId) {
-        await prisma.job.update({ where: { id: body.jobId }, data: { status: "FAILED" } });
-      }
-    } catch(e) {}
+    if (jobId) {
+      try {
+        await prisma.job.update({ where: { id: jobId }, data: { status: "FAILED", resultReport: `System Error: ${error.message || "Unknown"}` } });
+      } catch(e) {}
+    }
     
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
