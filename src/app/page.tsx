@@ -292,13 +292,22 @@ export default function Home() {
                   <p className="font-semibold text-slate-700">${credits.apify.remaining.toFixed(2)} <span className="text-slate-400 font-normal">/ ${credits.apify.limit.toFixed(2)}</span></p>
                 </div>
               </div>
-              <div className="border-l pl-4 pr-2 flex items-center gap-2">
+              <div className="border-l pl-4 pr-2 flex items-center gap-2 relative group cursor-help">
                 <Activity className="text-purple-500" size={18} />
                 <div>
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Gemini AI</p>
-                  <p className="font-semibold text-xs mt-0.5 text-slate-600 max-w-[150px] truncate" title={credits.gemini.message}>
-                    Free Tier limit applies
+                  <p className="font-semibold text-xs mt-0.5 text-slate-600 max-w-[150px] truncate flex items-center gap-1">
+                    Free Tier Info <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 rounded-full">?</span>
                   </p>
+                </div>
+                
+                {/* Tooltip Bubble */}
+                <div className="absolute top-full mt-3 right-0 w-64 p-3 bg-slate-800 text-white text-xs leading-relaxed rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 transform group-hover:translate-y-0 translate-y-1">
+                  <div className="absolute -top-1.5 right-6 w-3 h-3 bg-slate-800 rotate-45 rounded-sm"></div>
+                  <div className="relative z-10">
+                    <p className="font-semibold text-purple-300 mb-1">Gemini API Limits</p>
+                    <p>{credits.gemini.message}</p>
+                  </div>
                 </div>
               </div>
             </div>
