@@ -129,6 +129,7 @@ export default function Home() {
         body: JSON.stringify({ 
           type, 
           url, 
+          urlTitle: savedUrlTitle,
           promptContent,
           resultsLimit,
           viewOption,

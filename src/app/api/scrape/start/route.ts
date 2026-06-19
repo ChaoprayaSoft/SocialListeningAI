@@ -7,6 +7,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const startScrapeSchema = z.object({
   type: z.enum(["SCRAPE", "ANALYZE", "SCRAPE_AND_ANALYZE"]).default("SCRAPE_AND_ANALYZE"),
   url: z.string().url("Invalid URL").optional().or(z.literal("")),
+  urlTitle: z.string().optional(),
   promptContent: z.string().optional().or(z.literal("")),
   aiModel: z.string().default("gemini-1.5-pro"),
   sourceJobIds: z.array(z.string()).optional(),
@@ -22,10 +23,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
     }
 
-    const { type, url, promptContent, aiModel, sourceJobIds, resultsLimit, viewOption } = parsed.data;
+    const { type, url, urlTitle, promptContent, aiModel, sourceJobIds, resultsLimit, viewOption } = parsed.data;
 
-    const titlePrefix = type === "ANALYZE" ? "Analysis" : type === "SCRAPE" ? "Scrape" : "Scrape & Analyze";
-    const title = `${titlePrefix} ${new Date().toLocaleString('en-GB')}`;
+    let title = "";
+    const dateStr = new Date().toLocaleString('en-GB');
+    
+    if (type === "ANALYZE") {
+      title = `Analysis ${dateStr}`;
+    } else {
+      const prefix = type === "SCRAPE_AND_ANALYZE" ? "Scrape & Analyze" : "Scrape";
+      const name = urlTitle ? urlTitle : url ? url : "Unknown URL";
+      title = `[${name}] ${prefix} ${dateStr}`;
+    }
 
     const job = await prisma.job.create({
       data: {
