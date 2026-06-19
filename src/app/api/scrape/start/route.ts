@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const { type, url, urlTitle, promptContent, aiModel, sourceJobIds, resultsLimit, viewOption } = parsed.data;
 
     let title = "";
-    const dateStr = new Date().toLocaleString('en-GB');
+    const dateStr = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' });
     
     if (type === "ANALYZE") {
       title = `Analysis ${dateStr}`;
