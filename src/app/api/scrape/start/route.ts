@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         throw new Error("Missing source jobs for analysis");
       }
       
-      // Fetch raw data from selected jobs
+      // Fetch raw data and previous reports from selected jobs
       const sourceJobs = await prisma.job.findMany({
         where: { id: { in: sourceJobIds } }
       });
@@ -64,8 +64,13 @@ export async function POST(req: NextRequest) {
         .map(j => JSON.parse(j.rawScrapeData!))
         .flat();
 
-      if (combinedRawData.length === 0) {
-        await prisma.job.update({ where: { id: job.id }, data: { status: "FAILED", resultReport: "No raw data found in selected jobs." }});
+      const previousReports = sourceJobs
+        .filter(j => j.resultReport)
+        .map(j => `Title: ${j.title}\nReport:\n${j.resultReport}`)
+        .join("\n\n---\n\n");
+
+      if (combinedRawData.length === 0 && !previousReports) {
+        await prisma.job.update({ where: { id: job.id }, data: { status: "FAILED", resultReport: "No raw data or previous reports found in selected jobs." }});
         return NextResponse.json({ jobId: job.id, status: "success" });
       }
 
@@ -76,14 +81,20 @@ export async function POST(req: NextRequest) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
       const model = genAI.getGenerativeModel({ model: aiModel });
 
+      let contextSection = "";
+      if (combinedRawData.length > 0) {
+        contextSection += `\nRaw Scraped Data (JSON):\n---\n${JSON.stringify(combinedRawData, null, 2)}\n---\n`;
+      }
+      if (previousReports) {
+        contextSection += `\nPrevious AI Analysis Reports:\n---\n${previousReports}\n---\n`;
+      }
+
       const promptText = `
         You are an AI Social Listening Analyst.
         User Prompt/Instructions: ${promptContent}
         
-        Analyze the following social media data (posts and comments) from multiple scraping runs and generate a detailed Markdown report:
-        ---
-        ${JSON.stringify(combinedRawData, null, 2)}
-        ---
+        Analyze the following provided context data and generate a detailed Markdown report:
+        ${contextSection}
       `;
 
       try {

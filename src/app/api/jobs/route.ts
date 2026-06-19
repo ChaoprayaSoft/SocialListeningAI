@@ -3,12 +3,14 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    // Return only jobs that are SCRAPE or SCRAPE_AND_ANALYZE and COMPLETED
+    // Return jobs that have either raw data or an analysis report to be used as sources
     const jobs = await prisma.job.findMany({
       where: {
         status: "COMPLETED",
-        type: { in: ["SCRAPE", "SCRAPE_AND_ANALYZE"] },
-        rawScrapeData: { not: null }, // Must have raw data to be analyzed
+        OR: [
+          { rawScrapeData: { not: null } },
+          { resultReport: { not: null } }
+        ]
       },
       orderBy: { createdAt: "desc" },
     });

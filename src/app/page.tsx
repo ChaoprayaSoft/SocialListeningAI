@@ -42,6 +42,8 @@ export default function Home() {
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [previewJob, setPreviewJob] = useState<Job | null>(null);
+
   useEffect(() => {
     fetch("/api/models").then(res => res.json()).then(data => {
       if (Array.isArray(data)) {
@@ -351,13 +353,30 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="max-h-48 overflow-y-auto border bg-white rounded-md p-2 space-y-2">
-                  {completedScrapes.length === 0 ? <p className="text-sm text-slate-500 p-2">No completed scrape jobs available.</p> : null}
-                  {completedScrapes.map(scrape => (
-                    <label key={scrape.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer">
-                      <input type="checkbox" checked={selectedSourceJobs.includes(scrape.id)} onChange={() => toggleSourceJob(scrape.id)} />
-                      <span className="text-sm font-medium">{scrape.title}</span>
-                    </label>
-                  ))}
+                  {completedScrapes.length === 0 ? <p className="text-sm text-slate-500 p-2">No completed jobs available.</p> : null}
+                  {completedScrapes.map(scrape => {
+                    const isReport = !!scrape.resultReport;
+                    const isRaw = !!scrape.rawScrapeData;
+                    
+                    return (
+                      <div key={scrape.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded group">
+                        <label className="flex items-center gap-3 cursor-pointer flex-1">
+                          <input type="checkbox" checked={selectedSourceJobs.includes(scrape.id)} onChange={() => toggleSourceJob(scrape.id)} />
+                          <span className="text-sm font-medium flex items-center gap-2">
+                            {isReport ? <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded uppercase font-bold">Report</span> : null}
+                            {isRaw && !isReport ? <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase font-bold">Raw</span> : null}
+                            {scrape.title}
+                          </span>
+                        </label>
+                        <button 
+                          onClick={() => setPreviewJob(scrape)}
+                          className="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity px-2"
+                        >
+                          👁️ Preview
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -498,6 +517,35 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {previewJob && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-xl">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                👁️ Preview: {previewJob.title}
+              </h3>
+              <button onClick={() => setPreviewJob(null)} className="text-slate-500 hover:text-slate-700 text-xl font-bold">&times;</button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              {previewJob.resultReport ? (
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown>{previewJob.resultReport}</ReactMarkdown>
+                </div>
+              ) : previewJob.rawScrapeData ? (
+                <div className="bg-slate-900 text-green-400 p-4 rounded-md text-xs font-mono overflow-x-auto">
+                  <pre>{JSON.stringify(JSON.parse(previewJob.rawScrapeData), null, 2)}</pre>
+                </div>
+              ) : (
+                <p className="text-slate-500 italic">No content available</p>
+              )}
+            </div>
+            <div className="p-4 border-t bg-slate-50 rounded-b-xl flex justify-end">
+              <button onClick={() => setPreviewJob(null)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-md text-sm font-medium">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
