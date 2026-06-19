@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Activity, AlertTriangle, Clock, Search, Save, Database, BarChart2, Download, FileText } from "lucide-react";
+import { Activity, AlertTriangle, Clock, Search, Save, Database, BarChart2, Download, FileText, Wallet } from "lucide-react";
 
 type Prompt = { id: string; title: string; content: string };
 type SavedUrl = { id: string; title: string; url: string };
@@ -44,6 +44,8 @@ export default function Home() {
 
   const [previewJob, setPreviewJob] = useState<Job | null>(null);
   const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
+  
+  const [credits, setCredits] = useState<any>(null);
 
   useEffect(() => {
     fetch("/api/models").then(res => res.json()).then(data => {
@@ -65,6 +67,10 @@ export default function Home() {
     }).catch(console.error);
 
     fetchCompletedScrapes();
+
+    fetch("/api/credits").then(res => res.json()).then(data => {
+      if (data && !data.error) setCredits(data);
+    }).catch(console.error);
   }, []);
 
   const fetchCompletedScrapes = () => {
@@ -271,11 +277,32 @@ export default function Home() {
     <main className="min-h-screen bg-slate-50 p-8 font-sans text-slate-900 print:bg-white print:p-0">
       <div className="max-w-4xl mx-auto space-y-8 print:space-y-0 print:max-w-none">
         
-        <header className="mb-8 border-b pb-4 print:hidden">
+        <header className="mb-8 border-b pb-4 flex justify-between items-center print:hidden flex-wrap gap-4">
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Activity className="text-blue-600" />
             AI Satisfaction Management
           </h1>
+          
+          {credits && (
+            <div className="flex gap-4 text-sm bg-white p-2 border rounded-lg shadow-sm">
+              <div className="flex items-center gap-2 px-2">
+                <Wallet className="text-emerald-500" size={18} />
+                <div>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Apify Credit</p>
+                  <p className="font-semibold text-slate-700">${credits.apify.remaining.toFixed(2)} <span className="text-slate-400 font-normal">/ ${credits.apify.limit.toFixed(2)}</span></p>
+                </div>
+              </div>
+              <div className="border-l pl-4 pr-2 flex items-center gap-2">
+                <Activity className="text-purple-500" size={18} />
+                <div>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Gemini AI</p>
+                  <p className="font-semibold text-xs mt-0.5 text-slate-600 max-w-[150px] truncate" title={credits.gemini.message}>
+                    Free Tier limit applies
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </header>
 
         {error && (
