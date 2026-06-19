@@ -18,16 +18,23 @@ export async function GET() {
     console.log("Apify Limits:", JSON.stringify(limitsData, null, 2));
     console.log("Apify Usage:", JSON.stringify(usageData, null, 2));
 
-    // Calculate correctly based on limits
     let limit = 5.0; // fallback
-    if (limitsData?.data?.monthlyUsageUsdLimit !== undefined) {
+    if (limitsData?.data?.maxMonthlyUsageUsd !== undefined) {
+      limit = limitsData.data.maxMonthlyUsageUsd;
+    } else if (limitsData?.data?.monthlyUsageUsdLimit !== undefined) {
       limit = limitsData.data.monthlyUsageUsdLimit;
     } else if (limitsData?.data?.usageLimitUsd !== undefined) {
       limit = limitsData.data.usageLimitUsd;
     }
 
     let used = 0;
-    if (usageData?.data?.totalUsageCreditsUsd !== undefined) {
+    if (limitsData?.data?.currentUsage?.usd !== undefined) {
+      used = limitsData.data.currentUsage.usd;
+    } else if (usageData?.data?.totalUsageCreditsUsdAfterVolumeDiscount !== undefined) {
+      used = usageData.data.totalUsageCreditsUsdAfterVolumeDiscount;
+    } else if (usageData?.data?.totalUsageCreditsUsdBeforeVolumeDiscount !== undefined) {
+      used = usageData.data.totalUsageCreditsUsdBeforeVolumeDiscount;
+    } else if (usageData?.data?.totalUsageCreditsUsd !== undefined) {
       used = usageData.data.totalUsageCreditsUsd;
     } else if (usageData?.data?.totalMonthlyUsageUsd !== undefined) {
       used = usageData.data.totalMonthlyUsageUsd;
