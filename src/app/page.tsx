@@ -249,6 +249,24 @@ export default function Home() {
     );
   };
 
+  const handleDeleteJob = async (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this data? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/job/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setCompletedScrapes(prev => prev.filter(j => j.id !== id));
+        setSelectedSourceJobs(prev => prev.filter(jId => jId !== id));
+      } else {
+        alert("Failed to delete.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting data.");
+    }
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 p-8 font-sans text-slate-900 print:bg-white print:p-0">
       <div className="max-w-4xl mx-auto space-y-8 print:space-y-0 print:max-w-none">
@@ -366,12 +384,20 @@ export default function Home() {
                               {scrape.title}
                             </span>
                           </label>
-                          <button 
-                            onClick={() => setPreviewJob({ ...scrape, resultReport: undefined })} // Show only raw in preview
-                            className="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity px-2"
-                          >
-                            👁️ Preview
-                          </button>
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity px-2">
+                            <button 
+                              onClick={(e) => { e.preventDefault(); setPreviewJob({ ...scrape, resultReport: undefined }); }}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              👁️ Preview
+                            </button>
+                            <button 
+                              onClick={(e) => handleDeleteJob(scrape.id, e)}
+                              className="text-xs text-red-600 hover:text-red-800"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -390,12 +416,20 @@ export default function Home() {
                               {scrape.title}
                             </span>
                           </label>
-                          <button 
-                            onClick={() => setPreviewJob({ ...scrape, rawScrapeData: undefined })} // Show only report in preview
-                            className="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity px-2"
-                          >
-                            👁️ Preview
-                          </button>
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity px-2">
+                            <button 
+                              onClick={(e) => { e.preventDefault(); setPreviewJob({ ...scrape, rawScrapeData: undefined }); }}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              👁️ Preview
+                            </button>
+                            <button 
+                              onClick={(e) => handleDeleteJob(scrape.id, e)}
+                              className="text-xs text-red-600 hover:text-red-800"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
