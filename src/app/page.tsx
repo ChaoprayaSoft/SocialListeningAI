@@ -45,6 +45,10 @@ export default function Home() {
   const [previewJob, setPreviewJob] = useState<Job | null>(null);
   const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
   
+  const [showSecretModal, setShowSecretModal] = useState(false);
+  const [secretKeyInput, setSecretKeyInput] = useState("");
+  const [pendingJobType, setPendingJobType] = useState<"SCRAPE" | "ANALYZE" | "SCRAPE_AND_ANALYZE" | null>(null);
+  
   const [credits, setCredits] = useState<any>(null);
 
   useEffect(() => {
@@ -121,7 +125,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [jobId, job?.status]);
 
-  const handleSubmit = async (type: "SCRAPE" | "ANALYZE" | "SCRAPE_AND_ANALYZE") => {
+  const handleSubmit = async (type: "SCRAPE" | "ANALYZE" | "SCRAPE_AND_ANALYZE", secretKey: string) => {
     setError(null);
     if ((type === "SCRAPE" || type === "SCRAPE_AND_ANALYZE") && !url) return setError("Please enter a valid URL");
     if ((type === "ANALYZE" || type === "SCRAPE_AND_ANALYZE") && !promptContent) return setError("Please enter a prompt");
@@ -143,7 +147,8 @@ export default function Home() {
           resultsLimit,
           viewOption,
           aiModel,
-          sourceJobIds: type === "ANALYZE" ? selectedSourceJobs : undefined 
+          sourceJobIds: type === "ANALYZE" ? selectedSourceJobs : undefined,
+          secretKey
         }),
       });
       const data = await res.json();
@@ -534,7 +539,11 @@ export default function Home() {
             )}
 
             <button 
-              onClick={() => handleSubmit(activeTab === "BOTH" ? "SCRAPE_AND_ANALYZE" : activeTab)}
+              onClick={() => {
+                setPendingJobType(activeTab === "BOTH" ? "SCRAPE_AND_ANALYZE" : activeTab);
+                setShowSecretModal(true);
+                setSecretKeyInput("");
+              }}
               disabled={isSubmitting}
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex justify-center items-center gap-2 disabled:opacity-50"
             >
@@ -654,6 +663,46 @@ export default function Home() {
             <div className="p-4 border-t bg-slate-50 flex justify-end gap-3">
               <button onClick={() => setJobToDelete(null)} className="px-4 py-2 bg-white border hover:bg-slate-50 text-slate-700 rounded-md text-sm font-medium">Cancel</button>
               <button onClick={confirmDeleteJob} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium">Delete Forever</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSecretModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full flex flex-col overflow-hidden">
+            <div className="p-4 border-b bg-slate-50 flex items-center gap-2">
+              <h3 className="font-semibold text-lg">Enter Secret Key</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-600 mb-4 text-sm">Please enter the ICIT_SECRET key to proceed.</p>
+              <input 
+                type="password" 
+                value={secretKeyInput}
+                onChange={(e) => setSecretKeyInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && secretKeyInput) {
+                    setShowSecretModal(false);
+                    if (pendingJobType) handleSubmit(pendingJobType, secretKeyInput);
+                  }
+                }}
+                className="w-full p-2 border rounded-md text-sm"
+                placeholder="Secret Key"
+                autoFocus
+              />
+            </div>
+            <div className="p-4 border-t bg-slate-50 flex justify-end gap-3">
+              <button onClick={() => setShowSecretModal(false)} className="px-4 py-2 bg-white border hover:bg-slate-50 text-slate-700 rounded-md text-sm font-medium">Cancel</button>
+              <button 
+                onClick={() => {
+                  setShowSecretModal(false);
+                  if (pendingJobType) handleSubmit(pendingJobType, secretKeyInput);
+                }}
+                disabled={!secretKeyInput}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md text-sm font-medium"
+              >
+                Proceed
+              </button>
             </div>
           </div>
         </div>

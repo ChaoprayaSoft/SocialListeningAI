@@ -13,6 +13,7 @@ const startScrapeSchema = z.object({
   sourceJobIds: z.array(z.string()).optional(),
   resultsLimit: z.number().min(1).max(100).default(20),
   viewOption: z.string().default("CHRONOLOGICAL"),
+  secretKey: z.string(),
 });
 
 export async function POST(req: NextRequest) {
@@ -23,7 +24,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.format() }, { status: 400 });
     }
 
-    const { type, url, urlTitle, promptContent, aiModel, sourceJobIds, resultsLimit, viewOption } = parsed.data;
+    const { type, url, urlTitle, promptContent, aiModel, sourceJobIds, resultsLimit, viewOption, secretKey } = parsed.data;
+
+    if (secretKey !== process.env.ICIT_SECRET) {
+      return NextResponse.json({ error: "Invalid secret key. Access denied." }, { status: 403 });
+    }
 
     let title = "";
     const dateStr = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' });
