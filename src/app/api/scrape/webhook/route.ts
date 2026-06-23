@@ -41,8 +41,13 @@ export async function POST(req: NextRequest) {
 
     // Extract textual content
     const extractedData = dataset.items.map((item: any) => ({
+      date: item.date || item.createdAt || item.timestamp || item.time || "Unknown Date",
+      postUrl: item.url || item.postUrl || "",
       postText: item.text || item.message || "",
-      comments: item.comments?.map((c: any) => c.text || c.message || "") || [],
+      comments: item.comments?.map((c: any) => ({
+        date: c.date || c.createdAt || c.timestamp || c.time || "Unknown Date",
+        text: c.text || c.message || ""
+      })) || [],
     }));
 
     const rawDataString = JSON.stringify(extractedData, null, 2);
