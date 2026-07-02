@@ -279,7 +279,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 p-8 font-sans text-slate-900 print:bg-white print:p-0">
+    <main className="min-h-screen bg-slate-50 p-4 sm:p-8 font-sans text-slate-900 print:bg-white print:p-0">
       <div className="max-w-4xl mx-auto space-y-8 print:space-y-0 print:max-w-none">
         
         <header className="mb-8 border-b pb-4 flex justify-between items-center print:hidden flex-wrap gap-4">
@@ -326,10 +326,10 @@ export default function Home() {
         )}
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print:hidden">
-          <div className="flex border-b mb-6">
-            <button className={`px-4 py-2 font-medium ${activeTab === 'BOTH' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("BOTH")}>Scrape & Analyze</button>
-            <button className={`px-4 py-2 font-medium ${activeTab === 'SCRAPE' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("SCRAPE")}>Scrape Only</button>
-            <button className={`px-4 py-2 font-medium ${activeTab === 'ANALYZE' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("ANALYZE")}>Analyze Previous</button>
+          <div className="flex overflow-x-auto border-b mb-6 scrollbar-hide">
+            <button className={`whitespace-nowrap px-4 py-2 font-medium ${activeTab === 'BOTH' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("BOTH")}>Scrape & Analyze</button>
+            <button className={`whitespace-nowrap px-4 py-2 font-medium ${activeTab === 'SCRAPE' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("SCRAPE")}>Scrape Only</button>
+            <button className={`whitespace-nowrap px-4 py-2 font-medium ${activeTab === 'ANALYZE' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`} onClick={() => setActiveTab("ANALYZE")}>Analyze Previous</button>
           </div>
           
           <div className="space-y-6">
@@ -361,7 +361,7 @@ export default function Home() {
                     className="w-full p-2 border rounded-md mb-4"
                   />
                   
-                  <div className="grid grid-cols-2 gap-4 mb-4 bg-white p-3 rounded-md border">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 bg-white p-3 rounded-md border">
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">✍️ Number of Posts</label>
                       <input 
@@ -383,17 +383,19 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 items-end">
-                    <input type="text" value={savedUrlTitle} onChange={(e) => setSavedUrlTitle(e.target.value)} placeholder="URL Title" className="flex-1 p-2 border rounded-md text-sm" />
-                    {!selectedUrlId ? (
-                      <button onClick={handleSaveUrl} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"><Save size={16} /> Save</button>
-                    ) : (
-                      <>
-                        <button onClick={handleUpdateUrl} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-md text-sm font-medium">Update</button>
-                        <button onClick={handleDeleteUrl} className="px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-md text-sm font-medium">Delete</button>
-                        <button onClick={() => { setSelectedUrlId(""); setUrl(""); setSavedUrlTitle(""); }} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium">Cancel</button>
-                      </>
-                    )}
+                  <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-end w-full">
+                    <input type="text" value={savedUrlTitle} onChange={(e) => setSavedUrlTitle(e.target.value)} placeholder="URL Title" className="w-full sm:flex-1 p-2 border rounded-md text-sm" />
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                      {!selectedUrlId ? (
+                        <button onClick={handleSaveUrl} className="flex-1 sm:flex-none px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex justify-center items-center gap-2"><Save size={16} /> Save</button>
+                      ) : (
+                        <>
+                          <button onClick={handleUpdateUrl} className="flex-1 sm:flex-none px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-md text-sm font-medium">Update</button>
+                          <button onClick={handleDeleteUrl} className="flex-1 sm:flex-none px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-md text-sm font-medium">Delete</button>
+                          <button onClick={() => { setSelectedUrlId(""); setUrl(""); setSavedUrlTitle(""); }} className="flex-1 sm:flex-none px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium">Cancel</button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -425,16 +427,16 @@ export default function Home() {
                               {scrape.title}
                             </span>
                           </label>
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity px-2">
+                          <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity px-2 mt-2 sm:mt-0">
                             <button 
                               onClick={(e) => { e.preventDefault(); setPreviewJob({ ...scrape, resultReport: undefined }); }}
-                              className="text-xs text-blue-600 hover:text-blue-800"
+                              className="text-xs px-2 py-1 sm:px-0 sm:py-0 bg-blue-50 sm:bg-transparent rounded text-blue-600 hover:text-blue-800"
                             >
                               👁️ Preview
                             </button>
                             <button 
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); setJobToDelete(scrape); }}
-                              className="text-xs text-red-600 hover:text-red-800"
+                              className="text-xs px-2 py-1 sm:px-0 sm:py-0 bg-red-50 sm:bg-transparent rounded text-red-600 hover:text-red-800"
                             >
                               🗑️ Delete
                             </button>
@@ -457,16 +459,16 @@ export default function Home() {
                               {scrape.title}
                             </span>
                           </label>
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity px-2">
+                          <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity px-2 mt-2 sm:mt-0">
                             <button 
                               onClick={(e) => { e.preventDefault(); setPreviewJob({ ...scrape, rawScrapeData: undefined }); }}
-                              className="text-xs text-blue-600 hover:text-blue-800"
+                              className="text-xs px-2 py-1 sm:px-0 sm:py-0 bg-blue-50 sm:bg-transparent rounded text-blue-600 hover:text-blue-800"
                             >
                               👁️ Preview
                             </button>
                             <button 
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); setJobToDelete(scrape); }}
-                              className="text-xs text-red-600 hover:text-red-800"
+                              className="text-xs px-2 py-1 sm:px-0 sm:py-0 bg-red-50 sm:bg-transparent rounded text-red-600 hover:text-red-800"
                             >
                               🗑️ Delete
                             </button>
@@ -504,17 +506,19 @@ export default function Home() {
                     value={promptContent} onChange={(e) => setPromptContent(e.target.value)} rows={4}
                     className="w-full p-2 border rounded-md mb-2" placeholder="e.g. Summarize the top 3 complaints..."
                   />
-                  <div className="flex gap-2 items-end">
-                    <input type="text" value={promptTitle} onChange={(e) => setPromptTitle(e.target.value)} placeholder="Prompt Title" className="flex-1 p-2 border rounded-md text-sm" />
-                    {!selectedPromptId ? (
-                      <button onClick={handleSavePrompt} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex items-center gap-2"><Save size={16} /> Save</button>
-                    ) : (
-                      <>
-                        <button onClick={handleUpdatePrompt} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-md text-sm font-medium">Update</button>
-                        <button onClick={handleDeletePrompt} className="px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-md text-sm font-medium">Delete</button>
-                        <button onClick={() => { setSelectedPromptId(""); setPromptContent(""); setPromptTitle(""); }} className="px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium">Cancel</button>
-                      </>
-                    )}
+                  <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-end w-full">
+                    <input type="text" value={promptTitle} onChange={(e) => setPromptTitle(e.target.value)} placeholder="Prompt Title" className="w-full sm:flex-1 p-2 border rounded-md text-sm" />
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                      {!selectedPromptId ? (
+                        <button onClick={handleSavePrompt} className="flex-1 sm:flex-none px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium flex justify-center items-center gap-2"><Save size={16} /> Save</button>
+                      ) : (
+                        <>
+                          <button onClick={handleUpdatePrompt} className="flex-1 sm:flex-none px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-md text-sm font-medium">Update</button>
+                          <button onClick={handleDeletePrompt} className="flex-1 sm:flex-none px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-md text-sm font-medium">Delete</button>
+                          <button onClick={() => { setSelectedPromptId(""); setPromptContent(""); setPromptTitle(""); }} className="flex-1 sm:flex-none px-4 py-2 bg-white hover:bg-slate-100 border text-slate-700 rounded-md text-sm font-medium">Cancel</button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="mt-4 bg-white p-3 rounded-md border">
