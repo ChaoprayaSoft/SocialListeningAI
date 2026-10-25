@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Activity, AlertTriangle, Clock, Search, Save, Database, BarChart2, Download, FileText, Wallet } from "lucide-react";
+import { Activity, AlertTriangle, Clock, Search, Save, Database, BarChart2, Download, FileText, Wallet, CheckSquare } from "lucide-react";
 
 type Prompt = { id: string; title: string; content: string };
 type SavedUrl = { id: string; title: string; url: string };
@@ -51,6 +51,12 @@ export default function Home() {
   
   const [credits, setCredits] = useState<any>(null);
 
+  const fetchCompletedScrapes = () => {
+    fetch("/api/jobs").then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setCompletedScrapes(data);
+    }).catch(console.error);
+  };
+
   useEffect(() => {
     fetch("/api/models").then(res => res.json()).then(data => {
       if (Array.isArray(data)) {
@@ -76,12 +82,6 @@ export default function Home() {
       if (data && !data.error) setCredits(data);
     }).catch(console.error);
   }, []);
-
-  const fetchCompletedScrapes = () => {
-    fetch("/api/jobs").then(res => res.json()).then(data => {
-      if (Array.isArray(data)) setCompletedScrapes(data);
-    }).catch(console.error);
-  }
 
   const handleExportSelectedJson = () => {
     if (selectedSourceJobs.length === 0) return alert("Please select at least one scrape job to export.");
@@ -261,6 +261,18 @@ export default function Home() {
     );
   };
 
+  const handleToggleSelectAllRaw = () => {
+    const rawScrapeIds = completedScrapes.filter(s => !!s.rawScrapeData).map(s => s.id);
+    if (rawScrapeIds.length === 0) return;
+
+    const allSelected = rawScrapeIds.every(id => selectedSourceJobs.includes(id));
+    if (allSelected) {
+      setSelectedSourceJobs(prev => prev.filter(id => !rawScrapeIds.includes(id)));
+    } else {
+      setSelectedSourceJobs(prev => Array.from(new Set([...prev, ...rawScrapeIds])));
+    }
+  };
+
   const confirmDeleteJob = async () => {
     if (!jobToDelete) return;
     try {
@@ -415,7 +427,28 @@ export default function Home() {
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-600 mb-2 px-1">Raw Scraped Data</h4>
+                    <div className="flex justify-between items-center mb-2 px-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-semibold text-slate-600">Raw Scraped Data</h4>
+                        {completedScrapes.filter(s => !!s.rawScrapeData).length > 0 && (
+                          <span className="text-xs text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-full font-medium">
+                            {completedScrapes.filter(s => !!s.rawScrapeData).length}
+                          </span>
+                        )}
+                      </div>
+                      {completedScrapes.filter(s => !!s.rawScrapeData).length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleToggleSelectAllRaw}
+                          className="text-xs px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-md font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <CheckSquare size={13} className="text-blue-600" />
+                          {completedScrapes.filter(s => !!s.rawScrapeData).map(s => s.id).every(id => selectedSourceJobs.includes(id))
+                            ? "Deselect All"
+                            : "Select All"}
+                        </button>
+                      )}
+                    </div>
                     <div className="max-h-40 overflow-y-auto border bg-white rounded-md p-2 space-y-1">
                       {completedScrapes.filter(s => !!s.rawScrapeData).length === 0 ? <p className="text-xs text-slate-400 p-2">No raw data available.</p> : null}
                       {completedScrapes.filter(s => !!s.rawScrapeData).map(scrape => (
